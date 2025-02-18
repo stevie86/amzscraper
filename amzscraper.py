@@ -81,25 +81,29 @@ class AmazonScraper:
     ORDER_DETAILS_TEMPLATE = f"{BASE_URL}/gp/css/summary/print.html/ref=od_aui_print_invoice?ie=UTF8&orderID={{order_id}}"
 
     def __init__(self, config: Config):
-        self.year = year
-        self.orders_dir = dest_dir
-        self.from_email = from_email
-        self.to_email = to_email
-        self.emailer = emailer
-        self.br = brcls()
-        self.br.login(user, password)
+        self.config = config
+        self.browser: Optional[Browser] = None
+        self.context: Optional[BrowserContext] = None
+        self.page: Optional[Page] = None
 
-    def _fetch_url(self, url):
-        key = hashlib.md5(url.encode("utf-8")).hexdigest()
-        print("fetching %s from server (with random sleep)" % url)
-        val = self.br.get_url(url)
-        rand_sleep()
-        return val
+    async def __aenter__(self):
+        playwright = await async_playwright().start()
+        self.browser = await playwright.chromium.launch(headless=self.config.headless)
+        self.context = await self.browser.new_context()
+        self.page = await self.context.new_page()
+        return self
 
-    def get_order_nums(self):
-        order_nums = set()
-        url = self.start_url.format(yr=self.year)
-        for page_num in itertools.count(start=2, step=1):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.context.close()
+        await self.browser.close()
+
+    async def get_orders_for_year(self, year: int) -> List[str]:
+        logger.info(f"Fetching orders for year {year}")
+        order_ids = []
+        
+        await self.page.goto(f"{self.ORDER_HISTORY_URL}?year={year}")
+        
+        while True:
             html = self._fetch_url(url)
             soup = BeautifulSoup(html, "lxml")
             order_links = soup.find_all("a", href=self.order_id_re)
@@ -228,18 +232,28 @@ def parse_args():
     return parser.parse_args()
 
 
+async def main(config: Config):
+    async with AmazonScraper(config) as scraper:
+        try:
+            await scraper.login()
+            for year in config.years:
+                order_ids = await scraper.get_orders_for_year(year)
+                for order_id in order_ids:
+                    await scraper.save_order_invoice(order_id)
+        except Exception as e:
+            logger.error(f"Error: {str(e)}")
+            sys.exit(1)
+
 def main():
-    args = vars(parse_args())
-    smtp_args = {k: args.pop(k) for k in list(args.keys()) if k.startswith("smtp_")}
-    if len(smtp_args) == 4:
-        emailer = Emailer(**smtp_args)
-    elif len(smtp_args) == 0:
-        emailer = None
-    else:
-        raise Exception("Did not get 0 or 4 SMTP arguments.")
-    years = args.pop("year")
-    for year in years:
-        AmzScraper(year=year, emailer=emailer, **args).run()
+    args = parse_args()
+    config = Config(
+        email=args.user,
+        password=args.password,
+        years=args.year,
+        output_dir=Path(args.dest_dir),
+        headless=True
+    )
+    asyncio.run(main(config))
 
 
 if __name__ == "__main__":
