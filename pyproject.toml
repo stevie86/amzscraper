@@ -1,0 +1,21 @@
+[build-system]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+    "lxml>=4.9.3"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amzscraper"
+version = "0.1.0"
+description = "Amazon Order History Scraper"
+requires-python = ">=3.7"
+dependencies = [
+    "playwright>=1.30",
+    "beautifulsoup4>=4.9.3",
+    "lxml>=4.9.3"
+]
+
+[tool.setuptools]
+packages = ["amzscraper"]

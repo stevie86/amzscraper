@@ -34,6 +34,11 @@ This guide explains how to run the Amazon Order Scraper on Windows 10/11 systems
 
 4. **Install Dependencies**  
    ```powershell
+   # Install with precompiled lxml (recommended)
+   pip install --only-binary=lxml -e .
+   
+   # Alternative: If above fails, install Visual Studio Build Tools first
+   winget install Microsoft.VisualStudio.2022.BuildTools --override "--passive --add Microsoft.VisualStudio.Workload.VCTools"
    pip install -e .
    ```
 

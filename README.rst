@@ -14,7 +14,8 @@ Installation
 
 1. Install prerequisites:
 ```bash
-python -m pip install playwright
+# Install Playwright and lxml dependencies
+python -m pip install --only-binary=lxml playwright
 ```
 
 2. Clone repository and install:
