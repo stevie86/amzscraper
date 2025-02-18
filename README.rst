@@ -1,42 +1,108 @@
 Amazon Order Scraper
 ====================
 
-Modern Python utility using Playwright to scrape Amazon orders and generate PDF receipts
-for tax/record keeping purposes.
+Modern Python utility using Playwright to scrape Amazon order histories and generate PDF invoices in bulk.
 
-To use::
+Features:
+- Browser automation with anti-detection measures
+- Async PDF generation using Playwright
+- Year-based order filtering
+- Optional email notifications with SMTP integration
 
-    python -m venv .venv
-    source .venv/bin/activate
-    pip install .
-    playwright install
-    python -m amzscraper -u <email> -p <password> 2021 2022 2023
+Installation
+------------
 
-Orders will be saved to the ``orders/`` directory by default. PDF generation is handled
-natively by Playwright without external dependencies.
+1. Install prerequisites:
+```bash
+python -m pip install playwright
+```
 
-For further options, see::
+2. Clone repository and install:
+```bash
+git clone https://github.com/yourusername/amzscraper.git
+cd amzscraper
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install .
+playwright install chromium
+```
 
-    python -m amzscraper -h
+Usage
+-----
+
+Basic command:
+```bash
+python -m amzscraper -u EMAIL -p PASSWORD [YEAR1 YEAR2...]
+```
+
+Example for multiple years:
+```bash
+python -m amzscraper -u user@example.com -p 'securepassword' 2021 2022 2023
+```
+
+Advanced options:
+```
+optional arguments:
+  -h, --help            show this help message and exit
+  --dest-dir DEST_DIR   Destination directory for order PDFs (default: orders/)
+  --smtp-host SMTP_HOST
+  --smtp-port SMTP_PORT
+  --smtp-user SMTP_USER
+  --smtp-password SMTP_PASSWORD
+  --from-email FROM_EMAIL
+  --to-email TO_EMAIL
+```
+
+File Structure
+--------------
+Orders are saved with the following structure:
+```
+dest_dir/
+├── ORDER_ID_1/
+│   └── ORDER_ID_1.pdf
+├── ORDER_ID_2/
+│   └── ORDER_ID_2.pdf
+...
+```
+
+Security Notes
+--------------
+1. Credentials are ONLY used during the scraping session
+2. Browser automation may trigger Amazon security checks:
+   - First-time runs should use a non-headless browser
+   - You may need to manually complete CAPTCHAs/2FA
+3. For production use:
+```bash
+# Read credentials from environment variables
+export AMAZON_USER='user@example.com'
+export AMAZON_PASSWORD='securepassword'
+python -m amzscraper
+```
 
 Requirements
 ------------
+- Python 3.7+ (async/await support)
+- Playwright 1.30+
+- Modern Chromium browser
 
-* Python 3.7+
-- Playwright (will install supported browser automatically)
-- smtp credentials if emailing receipts
+Troubleshooting
+---------------
+For manual intervention mode:
+```bash
+python -m amzscraper -u EMAIL -p PASSWORD --headless=false 2022
+```
 
-Email Configuration
--------------------
-To email PDF receipts, provide SMTP credentials either via command-line options or
-environment variables:
+Development
+-----------
+```bash
+# Run tests
+playwright test
 
-    --smtp-host SMTP_HOST   SMTP hostname (env: SMTP_HOST)
-    --smtp-port SMTP_PORT   SMTP port (env: SMTP_PORT)
-    --smtp-user SMTP_USER   SMTP username (env: SMTP_USER)
-    --smtp-password SMTP_PASSWORD SMTP password (env: SMTP_PASSWORD)
+# Generate debug logs
+python -m amzscraper -u EMAIL -p PASSWORD 2023 --log-level=DEBUG
+```
 
-Security Note
--------------
-Credentials are never stored and only used for the current session. Consider using
-environment variables for sensitive credentials.
+Legal Note
+----------
+Use of this tool must comply with Amazon's Terms of Service. Check order 
+history access permissions for your account type.
