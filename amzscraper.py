@@ -1,35 +1,37 @@
+from __future__ import annotations
 import argparse
+import asyncio
 import datetime
 import hashlib
-import itertools
+import logging
 import os
-import random
 import re
-import smtplib
-import subprocess
-import sys
-import time
+from dataclasses import dataclass
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.utils import COMMASPACE, formatdate
+from typing import Optional, List
 
-from bs4 import BeautifulSoup
-from selenium.common.exceptions import NoSuchElementException
+from playwright.async_api import async_playwright, Page, BrowserContext, Browser
 
-
-def rand_sleep(max_seconds=5):
-    """
-    Wait a little while so we don't spam Amazon.
-    """
-    seconds = random.randint(2, max_seconds)
-    print("Sleeping for %s seconds..." % seconds, end="")
-    sys.stdout.flush()
-    time.sleep(seconds)
-    print("done.")
+logger = logging.getLogger(__name__)
 
 
-class AmzChromeDriver(object):
+@dataclass
+class ScraperConfig:
+    user: str
+    password: str
+    years: List[int]
+    dest_dir: str = "orders"
+    headless: bool = True
+    from_email: Optional[str] = None
+    to_email: Optional[str] = None
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+
+class PlaywrightManager:
     """
     Replacement driver to login to Amazon and download URLs using the Selenium
     ChromeDriver.
