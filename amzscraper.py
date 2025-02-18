@@ -9,9 +9,15 @@ import sys
 from dataclasses import dataclass
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import COMMASPACE, formatdate
 from pathlib import Path
+import re
+import smtplib
+import subprocess
 from typing import Optional, List
 
+from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page
 
 logger = logging.getLogger(__name__)
@@ -29,48 +35,6 @@ class Config:
     smtp_password: Optional[str] = None
     notify_email: Optional[str] = None
 
-class PlaywrightManager:
-    """
-    Replacement driver to login to Amazon and download URLs using the Selenium
-    ChromeDriver.
-    """
-
-    def __init__(self):
-        from selenium import webdriver
-
-        self.driver = webdriver.Chrome("chromedriver")
-        self.driver.implicitly_wait(5)
-
-    def login(self, email, password):
-        driver = self.driver
-        driver.get("https://www.amazon.com/")
-        rand_sleep()
-        driver.find_element_by_css_selector(
-            "#nav-signin-tooltip > a.nav-action-button"
-        ).click()
-        rand_sleep()
-        driver.find_element_by_id("ap_email").clear()
-        driver.find_element_by_id("ap_email").send_keys(email)
-        # Sometimes there is a Continue button after entering your email;
-        # sometimes there isn't.
-        try:
-            driver.find_element_by_id("continue").click()
-            rand_sleep()
-        except NoSuchElementException:
-            print("No continue button found; ignoring...")
-        driver.find_element_by_id("ap_password").clear()
-        driver.find_element_by_id("ap_password").send_keys(password)
-        driver.find_element_by_id("signInSubmit").click()
-
-    def get_url(self, url):
-        self.driver.get(url)
-        # doesn't always work the first time, so get the page twice (agh!)
-        time.sleep(1)
-        self.driver.get(url)
-        return self.driver.page_source
-
-    def clean_up(self):
-        self.driver.quit()
 
 
 class Emailer(object):
@@ -110,32 +74,13 @@ class Emailer(object):
         smtp.close()
 
 
-class AmzScraper(object):
+class AmazonScraper:
+    BASE_URL = "https://www.amazon.com"
+    LOGIN_URL = f"{BASE_URL}/ap/signin"
+    ORDER_HISTORY_URL = f"{BASE_URL}/gp/css/order-history"
+    ORDER_DETAILS_TEMPLATE = f"{BASE_URL}/gp/css/summary/print.html/ref=od_aui_print_invoice?ie=UTF8&orderID={{order_id}}"
 
-    base_url = "https://www.amazon.com"
-    start_url = (
-        base_url
-        + "/gp/css/history/orders/view.html?orderFilter=year-{yr}&startAtIndex=1000"
-    )
-    order_url = (
-        base_url
-        + "/gp/css/summary/print.html/ref=od_aui_print_invoice?ie=UTF8&orderID={oid}"
-    )
-
-    order_date_re = re.compile(r"Order Placed:")
-    order_id_re = re.compile(r"orderID=([0-9-]+)")
-
-    def __init__(
-        self,
-        year,
-        user,
-        password,
-        dest_dir,
-        from_email,
-        to_email,
-        brcls=AmzChromeDriver,
-        emailer=None,
-    ):
+    def __init__(self, config: Config):
         self.year = year
         self.orders_dir = dest_dir
         self.from_email = from_email
