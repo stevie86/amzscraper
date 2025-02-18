@@ -19,10 +19,47 @@ from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 from typing import Optional, List
 
+from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright, Page, BrowserContext, Browser
 from selenium.common.exceptions import NoSuchElementException
 
 logger = logging.getLogger(__name__)
+
+
+class AmzChromeDriver:
+    """Legacy Chrome driver class"""
+    def __init__(self):
+        from selenium import webdriver
+        self.driver = webdriver.Chrome("chromedriver")
+        self.driver.implicitly_wait(5)
+
+    def login(self, email, password):
+        driver = self.driver
+        driver.get("https://www.amazon.com/")
+        rand_sleep()
+        driver.find_element_by_css_selector(
+            "#nav-signin-tooltip > a.nav-action-button"
+        ).click()
+        rand_sleep()
+        driver.find_element_by_id("ap_email").clear()
+        driver.find_element_by_id("ap_email").send_keys(email)
+        try:
+            driver.find_element_by_id("continue").click()
+            rand_sleep()
+        except NoSuchElementException:
+            print("No continue button found; ignoring...")
+        driver.find_element_by_id("ap_password").clear()
+        driver.find_element_by_id("ap_password").send_keys(password)
+        driver.find_element_by_id("signInSubmit").click()
+
+    def get_url(self, url):
+        self.driver.get(url)
+        time.sleep(1)
+        self.driver.get(url)
+        return self.driver.page_source
+
+    def clean_up(self):
+        self.driver.quit()
 
 
 def rand_sleep(max_seconds=5):
