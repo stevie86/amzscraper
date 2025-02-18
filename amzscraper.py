@@ -99,23 +99,33 @@ class AmazonScraper:
 
     async def get_orders_for_year(self, year: int) -> List[str]:
         logger.info(f"Fetching orders for year {year}")
-        order_ids = []
-        
-        await self.page.goto(f"{self.ORDER_HISTORY_URL}?year={year}")
+        order_ids = set()
+        page_num = 1
         
         while True:
-            html = self._fetch_url(url)
-            soup = BeautifulSoup(html, "lxml")
-            order_links = soup.find_all("a", href=self.order_id_re)
-            order_nums |= set(
-                [self.order_id_re.search(link["href"]).group(1) for link in order_links]
-            )
-            page_links = soup.find_all("a", text=str(page_num))
-            if not page_links:
-                print("found no links for page_num=%s; assuming completion" % page_num)
+            url = f"{self.ORDER_HISTORY_URL}?year={year}&startIndex={page_num * 10}"
+            await self.page.goto(url)
+            await self.page.wait_for_load_state("networkidle")
+            
+            # Extract order IDs from the current page
+            order_elements = await self.page.query_selector_all('[data-order-id]')
+            if not order_elements:
                 break
-            url = self.base_url + page_links[0]["href"]
-        print("found %s orders in %s" % (len(order_nums), self.year))
+                
+            for element in order_elements:
+                order_id = await element.get_attribute('data-order-id')
+                if order_id:
+                    order_ids.add(order_id)
+            
+            # Check for next page
+            next_button = await self.page.query_selector('.a-pagination .a-last:not(.a-disabled)')
+            if not next_button:
+                break
+                
+            page_num += 1
+            
+        logger.info(f"Found {len(order_ids)} orders for {year}")
+        return list(order_ids)
         return order_nums
 
     def run(self):
