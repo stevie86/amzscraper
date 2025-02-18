@@ -2,90 +2,32 @@ from __future__ import annotations
 import argparse
 import asyncio
 import datetime
-import hashlib
-import itertools
 import logging
 import os
 import random
-import re
-import smtplib
-import subprocess
 import sys
-import time
 from dataclasses import dataclass
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.utils import COMMASPACE, formatdate
+from pathlib import Path
 from typing import Optional, List
 
-from bs4 import BeautifulSoup
-from playwright.async_api import async_playwright, Page, BrowserContext, Browser
-from selenium.common.exceptions import NoSuchElementException
+from playwright.async_api import async_playwright, Browser, BrowserContext, Page
 
 logger = logging.getLogger(__name__)
 
-
-class AmzChromeDriver:
-    """Legacy Chrome driver class"""
-    def __init__(self):
-        from selenium import webdriver
-        self.driver = webdriver.Chrome("chromedriver")
-        self.driver.implicitly_wait(5)
-
-    def login(self, email, password):
-        driver = self.driver
-        driver.get("https://www.amazon.com/")
-        rand_sleep()
-        driver.find_element_by_css_selector(
-            "#nav-signin-tooltip > a.nav-action-button"
-        ).click()
-        rand_sleep()
-        driver.find_element_by_id("ap_email").clear()
-        driver.find_element_by_id("ap_email").send_keys(email)
-        try:
-            driver.find_element_by_id("continue").click()
-            rand_sleep()
-        except NoSuchElementException:
-            print("No continue button found; ignoring...")
-        driver.find_element_by_id("ap_password").clear()
-        driver.find_element_by_id("ap_password").send_keys(password)
-        driver.find_element_by_id("signInSubmit").click()
-
-    def get_url(self, url):
-        self.driver.get(url)
-        time.sleep(1)
-        self.driver.get(url)
-        return self.driver.page_source
-
-    def clean_up(self):
-        self.driver.quit()
-
-
-def rand_sleep(max_seconds=5):
-    """
-    Wait a little while so we don't spam Amazon.
-    """
-    seconds = random.randint(2, max_seconds)
-    print("Sleeping for %s seconds..." % seconds, end="")
-    sys.stdout.flush()
-    time.sleep(seconds)
-    print("done.")
-
-
 @dataclass
-class ScraperConfig:
-    user: str
+class Config:
+    email: str
     password: str
     years: List[int]
-    dest_dir: str = "orders"
+    output_dir: Path = Path("orders")
     headless: bool = True
-    from_email: Optional[str] = None
-    to_email: Optional[str] = None
     smtp_host: Optional[str] = None
-    smtp_port: Optional[int] = None
+    smtp_port: int = 587
     smtp_user: Optional[str] = None
     smtp_password: Optional[str] = None
+    notify_email: Optional[str] = None
 
 class PlaywrightManager:
     """
