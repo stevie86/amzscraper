@@ -1,35 +1,42 @@
 Amazon Order Scraper
 ====================
 
-This is a simple script using the Python selenium library to scrape all your Amazon
-orders and create handy PDFs for receipt/tax purposes.
+Modern Python utility using Playwright to scrape Amazon orders and generate PDF receipts
+for tax/record keeping purposes.
 
 To use::
 
-    mkvirtualenv -p python3.9 amzscraper
-    pip install git+https://github.com/tobiasmcnulty/amzscraper.git
-    amscraper -u <email> -p <pass> 2021
+    python -m venv .venv
+    source .venv/bin/activate
+    pip install .
+    playwright install
+    python -m amzscraper -u <email> -p <password> 2021 2022 2023
 
-If it does need to download a page from Amazon, a random sleep is inserted to throttle
-connections to the server.
-
-Orders will be downloaded to the ``orders/`` directory in your current directory by
-default
+Orders will be saved to the ``orders/`` directory by default. PDF generation is handled
+natively by Playwright without external dependencies.
 
 For further options, see::
 
-    amzscraper -h
+    python -m amzscraper -h
 
 Requirements
 ------------
 
 * Python 3.7+
-* ``virtualenv`` and ``virtualenvwrapper``
-* ``wkhtmltopdf`` installed and in your ``PATH``
-* ``chromedriver`` installed and in your ``PATH``
+- Playwright (will install supported browser automatically)
+- smtp credentials if emailing receipts
 
-Credits
--------
+Email Configuration
+-------------------
+To email PDF receipts, provide SMTP credentials either via command-line options or
+environment variables:
 
-This is loosely based on an `earlier project <http://chase-seibert.github.io/blog/2011/01/15/backup-your-amazon-order-history-with-python.html>`_
-by Chase Seibert.
+    --smtp-host SMTP_HOST   SMTP hostname (env: SMTP_HOST)
+    --smtp-port SMTP_PORT   SMTP port (env: SMTP_PORT)
+    --smtp-user SMTP_USER   SMTP username (env: SMTP_USER)
+    --smtp-password SMTP_PASSWORD SMTP password (env: SMTP_PASSWORD)
+
+Security Note
+-------------
+Credentials are never stored and only used for the current session. Consider using
+environment variables for sensitive credentials.
