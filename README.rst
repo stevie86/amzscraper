@@ -41,16 +41,16 @@ python -m amzscraper -u user@example.com -p 'securepassword' 2021 2022 2023
 ```
 
 Advanced options:
-```
-optional arguments:
+```bash
+# Command line arguments:
   -h, --help            show this help message and exit
   --dest-dir DEST_DIR   Destination directory for order PDFs (default: orders/)
-  --smtp-host SMTP_HOST
-  --smtp-port SMTP_PORT
-  --smtp-user SMTP_USER
-  --smtp-password SMTP_PASSWORD
-  --from-email FROM_EMAIL
-  --to-email TO_EMAIL
+  --smtp-host SMTP_HOST SMTP server hostname
+  --smtp-port SMTP_PORT SMTP server port (default: 587)
+  --smtp-user SMTP_USER SMTP username for authentication
+  --smtp-password SMTP_PASSWORD SMTP password for authentication
+  --from-email FROM_EMAIL Sender email address
+  --to-email TO_EMAIL   Recipient email address
 ```
 
 File Structure
