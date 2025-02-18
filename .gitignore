@@ -1,3 +1,5 @@
 orders/
 __pycache__/
 amzscraper.egg-info/
+.aider*
+.env
